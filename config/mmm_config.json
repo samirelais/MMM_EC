@@ -1,0 +1,60 @@
+{
+  "data": {
+    "sales_data_path": "../data/sales_data.csv",
+    "marketing_data_path": "../data/marketing_data.csv",
+    "external_factors_path": "../data/external_factors.csv",
+    "train_start_date": "2022-01-01",
+    "train_end_date": "2023-06-30",
+    "test_start_date": "2023-07-01",
+    "test_end_date": "2023-12-31"
+  },
+  "preprocessing": {
+    "remove_outliers": true,
+    "outlier_threshold": 3,
+    "fill_missing_strategy": "interpolate",
+    "normalize_features": true
+  },
+  "feature_engineering": {
+    "create_lag_features": true,
+    "lag_periods": [1, 2, 3, 7, 14, 28],
+    "create_rolling_features": true,
+    "rolling_windows": [7, 14, 30],
+    "create_holiday_features": true,
+    "create_seasonality_features": true
+  },
+  "modeling": {
+    "model_type": "lightgbm",
+    "validation_strategy": "time_series_split",
+    "num_validation_folds": 3,
+    "hyperparameter_tuning": true,
+    "random_state": 42
+  },
+  "marketing_channels": [
+    "tv",
+    "radio",
+    "print",
+    "social_media",
+    "search",
+    "email",
+    "display"
+  ],
+  "optimization": {
+    "budget_constraint": 1000000,
+    "min_channel_budget_pct": 0.05,
+    "max_channel_budget_pct": 0.4,
+    "optimization_method": "bayesian"
+  },
+  "reporting": {
+    "generate_charts": true,
+    "generate_html_report": true,
+    "generate_pdf_report": false,
+    "dashboard_port": 8501
+  },
+  "spark": {
+    "app_name": "mmm_ecommerce",
+    "driver_memory": "4g",
+    "executor_memory": "4g",
+    "executor_cores": 2,
+    "num_executors": 2
+  }
+}
