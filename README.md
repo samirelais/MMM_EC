@@ -1,4 +1,3 @@
-```markdown
 # Marketing Mix Modeling (MMM) avec PySpark pour E-commerce
 
 Ce projet implémente une analyse de Marketing Mix Modeling (MMM) complète avec PySpark pour optimiser l'allocation budgétaire marketing d'un détaillant en ligne. Il utilise les données Open Source "Online Retail" de Kaggle et est structuré comme une solution prête pour la production.
@@ -185,4 +184,3 @@ Ce projet est sous licence MIT.
 - Jin, Y., Wang, Y., Sun, Y., Chan, D., & Koehler, J. (2017). Bayesian Methods for Media Mix Modeling with Carryover and Shape Effects.
 - [Facebook/Meta Robyn](https://github.com/facebookexperimental/Robyn)
 - [Google's MMM Python Library](https://github.com/google/lightweight_mmm)
-```
