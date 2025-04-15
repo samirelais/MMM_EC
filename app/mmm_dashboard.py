@@ -31,24 +31,36 @@ st.title("📊 Dashboard Marketing Mix Modeling")
 st.write("Analyse et optimisation de l'attribution marketing basée sur les données Online Retail")
 
 # Définition des chemins
-# Utiliser le chemin exact de votre projet sur Google Colab
-base_path = "/content/drive/MyDrive/mmm-ecommerce"
+# Utiliser des chemins relatifs au lieu de chemins absolus
+base_path = os.path.dirname(os.path.abspath(__file__))
+if not os.path.isdir(base_path):
+    base_path = os.getcwd()
 
-# Ajouter les chemins nécessaires
-try:
-    sys.path.append(base_path)
-    sys.path.append(os.path.join(base_path, 'src'))
-    sys.path.append(os.path.join(base_path, 'app'))
-    
-    # Importer les modules nécessaires
+# Pour remonter d'un niveau depuis le dossier app/
+parent_path = os.path.dirname(base_path)
+
+# Fonction pour charger la configuration
+@st.cache_data
+def load_config():
     try:
-        from src.data.online_retail_loader import OnlineRetailLoader
-        from src.models.mmm_model import MMMModel
-        from src.visualization.visualization import MMMVisualization
-    except ImportError as e:
-        st.error(f"Erreur d'importation des modules: {e}")
-except Exception as e:
-    st.error(f"Erreur lors de la configuration des chemins: {e}")
+        config_path = os.path.join(parent_path, "config/online_retail_config.json")
+        with open(config_path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError as e:
+        st.warning(f"Fichier de configuration non trouvé: {e}. Chemins vérifiés: {config_path}")
+        # Configuration par défaut
+        return {
+            "marketing_channels": ["search", "social", "email", "display", "affiliates"],
+            "data_path": "data/online_retail.csv",
+            "date_column": "InvoiceDate",
+            "target_column": "Revenue",
+            "time_granularity": "daily"
+        }
+
+
+
+
+
 
 # Fonction pour charger la configuration
 @st.cache_data
