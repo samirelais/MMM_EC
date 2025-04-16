@@ -44,7 +44,7 @@ def get_project_root():
         try:
             # Liste des fichiers à vérifier
             required_files = [
-                'online_retail.csv', 
+                'Online_Retail.csv', 
                 'online_retail_config.json'
             ]
             
