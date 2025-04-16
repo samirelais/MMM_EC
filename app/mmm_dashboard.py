@@ -310,29 +310,327 @@ config = load_config()
 data = load_data()
 contributions_df, budget_df, metrics = load_results()
 
-# [Toutes vos fonctions précédentes pour generate_pdf_report et generate_mmm_guide restent identiques]
 def generate_pdf_report(contributions_df, budget_df, metrics, config):
     """
-    Génère un rapport PDF complet avec les résultats de l'analyse MMM.
+    Génère un rapport PDF complet avec les résultats de l'analyse MMM
+    en utilisant ReportLab (plus robuste pour l'encodage).
     """
     try:
-        pdf = FPDF()
-        # [Votre implémentation existante]
-        return pdf.output(dest='S')
+        # Créer un buffer pour stocker le PDF
+        buffer = io.BytesIO()
+        
+        # Créer le document PDF
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = styles['Heading1']
+        subtitle_style = styles['Heading2']
+        normal_style = styles['Normal']
+        
+        # Titre principal
+        elements.append(Paragraph("Rapport Marketing Mix Modeling", title_style))
+        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Paragraph(f"Date: {datetime.now().strftime('%d/%m/%Y')}", normal_style))
+        elements.append(Spacer(1, 0.5*inch))
+        
+        # Métriques du modèle
+        elements.append(Paragraph("Performance du modèle", subtitle_style))
+        
+        # Créer un tableau pour les métriques
+        metrics_data = [["Métrique", "Valeur"],
+                       ["R²", f"{metrics['r2']:.3f}"],
+                       ["RMSE", f"{metrics['rmse']:.2f}"],
+                       ["MAE", f"{metrics['mae']:.2f}"],
+                       ["MAPE", f"{metrics['mape']:.2f}%"]]
+        
+        metrics_table = Table(metrics_data, colWidths=[2*inch, 2*inch])
+        metrics_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (1, 0), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(metrics_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Contributions par canal
+        elements.append(Paragraph("Contributions par canal", subtitle_style))
+        
+        # Préparer les données de contribution
+        channels = config['marketing_channels']
+        contrib_cols = [f"{ch}_contribution" for ch in channels if f"{ch}_contribution" in contributions_df.columns]
+        if 'baseline_contribution' in contributions_df.columns:
+            contrib_cols.append('baseline_contribution')
+            
+        # Calculer les contributions moyennes
+        avg_contribs = {}
+        for col in contrib_cols:
+            channel = col.replace('_contribution', '')
+            avg_contribs[channel] = contributions_df[col].mean()
+        
+        total_revenue = contributions_df['predicted_revenue'].mean()
+            
+        # Créer un tableau pour les contributions
+        contrib_data = [["Canal", "Contribution (£)", "Pourcentage (%)"]]
+        for channel, value in avg_contribs.items():
+            pct = max(0, value / total_revenue * 100)
+            contrib_data.append([channel, f"{value:.2f}", f"{pct:.2f}%"])
+        
+        contrib_table = Table(contrib_data, colWidths=[2*inch, 2*inch, 2*inch])
+        contrib_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(contrib_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Allocation budgétaire
+        elements.append(Paragraph("Allocation budgétaire optimisée", subtitle_style))
+        
+        if 'channel' in budget_df.columns:
+            # Créer un tableau pour l'allocation budgétaire
+            budget_data = [["Canal", "Budget (£)", "Budget (%)", "ROI"]]
+            for _, row in budget_df.iterrows():
+                budget_data.append([
+                    row['channel'],
+                    f"{row['budget']:.2f}",
+                    f"{row['budget_pct']:.2f}%",
+                    f"{row['roi']:.2f}"
+                ])
+            
+            budget_table = Table(budget_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+            budget_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            elements.append(budget_table)
+        else:
+            elements.append(Paragraph("Données d'allocation budgétaire non disponibles.", normal_style))
+        
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Recommandations
+        elements.append(Paragraph("Recommandations", subtitle_style))
+        
+        # Style personnalisé pour les recommandations
+        reco_style = ParagraphStyle(
+            'RecoStyle',
+            parent=normal_style,
+            leftIndent=20,
+            rightIndent=20,
+            spaceBefore=10,
+            spaceAfter=10,
+            leading=14
+        )
+        
+        # Trouver le meilleur canal
+        best_roi_channel = "N/A"
+        if 'channel' in budget_df.columns and 'roi' in budget_df.columns and not budget_df.empty:
+            best_roi_channel = budget_df.loc[budget_df['roi'].idxmax()]['channel']
+        
+        # Ajouter les recommandations
+        elements.append(Paragraph("Basé sur notre analyse, voici nos recommandations:", normal_style))
+        elements.append(Spacer(1, 0.1*inch))
+        
+        elements.append(Paragraph(f"1. Le canal '{best_roi_channel}' présente le meilleur ROI et devrait être privilégié.", reco_style))
+        elements.append(Paragraph("2. L'allocation budgétaire optimisée présentée dans ce rapport permettrait d'améliorer le retour sur investissement global.", reco_style))
+        elements.append(Paragraph("3. Une révision trimestrielle de l'allocation est recommandée pour s'adapter aux évolutions du marché.", reco_style))
+        elements.append(Paragraph("4. Des tests A/B devraient être conduits pour valider empiriquement l'efficacité des différents canaux.", reco_style))
+        
+        # Générer le PDF
+        doc.build(elements)
+        return buffer.getvalue()
+        
     except Exception as e:
-        st.error(f"Erreur lors de la génération du rapport PDF: {e}")
+        st.error(f"Erreur lors de la génération du rapport PDF: {str(e)}")
         return None
 
 def generate_mmm_guide():
     """Génère un guide PDF sur les principes du Marketing Mix Modeling"""
     try:
+        # Créer un buffer pour stocker le PDF
         buffer = io.BytesIO()
-        # [Votre implémentation existante]
+        
+        # Créer le document PDF
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = styles['Heading1']
+        subtitle_style = styles['Heading2']
+        subsubtitle_style = styles['Heading3']
+        normal_style = styles['Normal']
+        
+        # Style personnalisé pour les paragraphes du guide
+        guide_style = ParagraphStyle(
+            'GuideStyle',
+            parent=normal_style,
+            leading=14,  # Espacement entre les lignes
+            spaceAfter=12  # Espace après chaque paragraphe
+        )
+        
+        # Titre principal
+        elements.append(Paragraph("Guide du Marketing Mix Modeling", title_style))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Introduction
+        elements.append(Paragraph("Introduction", subtitle_style))
+        intro_text = """
+        Le Marketing Mix Modeling (MMM) est une technique statistique utilisée pour quantifier l'impact des différentes 
+        activités marketing sur les ventes. Ce guide vous présente les concepts fondamentaux du MMM, sa méthodologie
+        et son application dans un contexte d'entreprise.
+        """
+        elements.append(Paragraph(intro_text, guide_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Principes fondamentaux
+        elements.append(Paragraph("Principes fondamentaux", subtitle_style))
+        
+        elements.append(Paragraph("Qu'est-ce que le MMM?", subsubtitle_style))
+        mmm_text = """
+        Le Marketing Mix Modeling est une approche analytique qui utilise des techniques de régression statistique pour 
+        évaluer l'efficacité des différents canaux marketing et quantifier leur impact sur les ventes ou d'autres 
+        indicateurs de performance. L'objectif principal est de déterminer le retour sur investissement (ROI) de chaque 
+        canal et d'optimiser l'allocation des ressources marketing.
+        """
+        elements.append(Paragraph(mmm_text, guide_style))
+        
+        elements.append(Paragraph("Variables clés du MMM", subsubtitle_style))
+        var_text = """
+        Un modèle MMM prend généralement en compte quatre types de variables:
+        • Variables dépendantes: Ventes, revenus ou autres KPIs à expliquer
+        • Variables marketing: Dépenses publicitaires, GRP, impressions par canal
+        • Variables de contrôle: Prix, distribution, saisonnalité, concurrence
+        • Variables externes: Facteurs macroéconomiques, météo, événements spéciaux
+        """
+        elements.append(Paragraph(var_text, guide_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Méthodologie
+        elements.append(Paragraph("Méthodologie", subtitle_style))
+        
+        elements.append(Paragraph("1. Collecte et préparation des données", subsubtitle_style))
+        data_text = """
+        La première étape consiste à rassembler toutes les données pertinentes: historique des ventes, 
+        dépenses marketing par canal, prix, promotions, et variables externes. Les données doivent être 
+        nettoyées, agrégées au même niveau temporel (généralement hebdomadaire ou mensuel) et explorées
+        pour détecter des tendances ou anomalies.
+        """
+        elements.append(Paragraph(data_text, guide_style))
+        
+        elements.append(Paragraph("2. Modélisation des effets marketing", subsubtitle_style))
+        model_text = """
+        Un modèle MMM complet prend en compte trois phénomènes essentiels:
+        • Effet Adstock (retardé): Les effets du marketing persistent au-delà de la période initiale
+        • Effet de saturation: Rendements décroissants à mesure que les dépenses augmentent
+        • Effet synergique: Interactions entre différents canaux marketing
+        
+        Ces effets sont modélisés à l'aide de transformations mathématiques comme les fonctions d'Adstock, 
+        les fonctions Hill, Michaelis-Menten ou logarithmiques pour les effets de saturation.
+        """
+        elements.append(Paragraph(model_text, guide_style))
+        
+        elements.append(Paragraph("3. Construction et validation du modèle", subsubtitle_style))
+        validation_text = """
+        Les modèles MMM peuvent être construits avec différentes techniques, allant de la régression linéaire 
+        aux algorithmes plus avancés comme le gradient boosting (XGBoost, LightGBM) ou les modèles bayésiens.
+        
+        La validation du modèle est cruciale et implique:
+        • Validation croisée pour éviter le surajustement
+        • Tests de robustesse avec différentes périodes
+        • Vérification des hypothèses statistiques
+        • Comparaison des résultats avec les données historiques
+        """
+        elements.append(Paragraph(validation_text, guide_style))
+        
+        elements.append(Paragraph("4. Analyse des résultats et optimisation", subsubtitle_style))
+        results_text = """
+        L'analyse des résultats permet d'identifier:
+        • La contribution de chaque canal aux ventes totales
+        • Le ROI par canal (retour généré pour chaque euro investi)
+        • Le point de saturation pour chaque canal
+        
+        Ces informations servent ensuite à optimiser l'allocation budgétaire future, généralement en utilisant 
+        des algorithmes d'optimisation sous contraintes.
+        """
+        elements.append(Paragraph(results_text, guide_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Applications et limites
+        elements.append(Paragraph("Applications et limites", subtitle_style))
+        
+        elements.append(Paragraph("Applications pratiques", subsubtitle_style))
+        applications_text = """
+        Le MMM est utilisé pour:
+        • Optimiser l'allocation budgétaire entre canaux
+        • Planifier les futures campagnes marketing
+        • Justifier les investissements marketing auprès de la direction
+        • Comprendre l'efficacité relative des différents canaux
+        • Simuler différents scénarios budgétaires
+        """
+        elements.append(Paragraph(applications_text, guide_style))
+        
+        elements.append(Paragraph("Limites et défis", subsubtitle_style))
+        limits_text = """
+        Le MMM présente certaines limites:
+        • Nécessite d'importantes quantités de données historiques (2-3 ans minimum)
+        • Difficulté à capturer les effets à très long terme (brand building)
+        • Complexité à modéliser les interactions entre canaux
+        • Sensibilité aux changements structurels du marché
+        • Incapacité à mesurer les effets au niveau individuel
+        """
+        elements.append(Paragraph(limits_text, guide_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Tendances récentes
+        elements.append(Paragraph("Tendances récentes", subtitle_style))
+        trends_text = """
+        Le MMM continue d'évoluer avec:
+        • L'intégration de l'apprentissage automatique pour des modèles plus précis
+        • L'unification avec les modèles d'attribution digitale (Unified MMM)
+        • L'utilisation de données granulaires au niveau géographique ou démographique
+        • L'incorporation de modèles bayésiens pour une meilleure quantification de l'incertitude
+        • L'automatisation du processus avec des plateformes comme Meta Robyn ou Google LightweightMMM
+        """
+        elements.append(Paragraph(trends_text, guide_style))
+        
+        # Conclusion
+        elements.append(Paragraph("Conclusion", subtitle_style))
+        conclusion_text = """
+        Le Marketing Mix Modeling reste un outil essentiel dans l'arsenal analytique des entreprises, 
+        permettant une approche basée sur les données pour optimiser l'efficacité marketing. Bien que 
+        présentant certaines limites, il offre une vision holistique de l'impact marketing difficile 
+        à obtenir par d'autres méthodes. Son évolution continue avec l'incorporation de nouvelles 
+        techniques et l'intégration de données plus détaillées en fait un domaine d'innovation constante.
+        """
+        elements.append(Paragraph(conclusion_text, guide_style))
+        
+        # Générer le PDF
+        doc.build(elements)
         return buffer.getvalue()
+        
     except Exception as e:
         st.error(f"Erreur lors de la génération du guide: {e}")
         return None
-
 # Titre de l'application
 st.title("📊 Dashboard Marketing Mix Modeling")
 st.write("Analyse et optimisation de l'attribution marketing basée sur les données Online Retail")
@@ -357,28 +655,39 @@ st.sidebar.info(
     """
 )
 
-# Bouton pour recharger l'analyse
-if st.sidebar.button("Actualiser les données"):
-    # Recharger les données et les résultats
-    config = load_config()
-    data = load_data()
-    contributions_df, budget_df, metrics = load_results()
-    st.success("Données actualisées avec succès!")
-
-# Ajout d'un bouton de téléchargement des rapports dans la sidebar
+# Ajout de boutons de téléchargement des rapports dans la sidebar
 st.sidebar.markdown("---")
 st.sidebar.subheader("Rapports")
-if st.sidebar.button("Générer un guide MMM (PDF)"):
-    pdf_guide = generate_mmm_guide()
-    if pdf_guide:
-        st.sidebar.download_button(
-            label="Télécharger le Guide MMM",
-            data=pdf_guide,
-            file_name="guide_mmm.pdf",
-            mime="application/pdf"
-        )
 
-# [Le reste de votre code original pour chaque page]
+# Bouton pour le guide
+guide_button = st.sidebar.button("Générer Guide MMM (PDF)")
+if guide_button:
+    # Utiliser st.spinner en dehors de la sidebar
+    with st.spinner('Génération du guide en cours...'):
+        pdf_guide = generate_mmm_guide()
+        if pdf_guide:
+            st.sidebar.success("Guide généré avec succès!")
+            st.sidebar.download_button(
+                label="Télécharger Guide MMM",
+                data=pdf_guide,
+                file_name="guide_mmm.pdf",
+                mime="application/pdf"
+            )
+
+# Bouton pour le rapport
+report_button = st.sidebar.button("Générer Rapport Complet (PDF)")
+if report_button:
+    # Utiliser st.spinner en dehors de la sidebar
+    with st.spinner('Génération du rapport en cours...'):
+        pdf_report = generate_pdf_report(contributions_df, budget_df, metrics, config)
+        if pdf_report:
+            st.sidebar.success("Rapport généré avec succès!")
+            st.sidebar.download_button(
+                label="Télécharger Rapport",
+                data=pdf_report,
+                file_name="rapport_mmm.pdf",
+                mime="application/pdf"
+            )
 # Vue d'ensemble
 if page == "Vue d'ensemble":
     st.header("Vue d'ensemble du projet MMM")
