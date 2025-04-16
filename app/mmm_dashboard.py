@@ -724,7 +724,7 @@ if page == "Vue d'ensemble":
         )
     
     with col2:
-        st.image("https://miro.medium.com/max/1200/1*6JgtnS-nglYMXmh32xqYxQ.png", 
+        st.image("https://media.woopra.com/image/upload/f_auto/v1721445625/What_is_Marketing_Mix_Modeling.png", 
                 caption="Exemple de Marketing Mix Modeling")
     
     # Afficher les métriques du modèle si disponibles
