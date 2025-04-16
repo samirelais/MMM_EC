@@ -692,41 +692,42 @@ if report_button:
 if page == "Vue d'ensemble":
     st.header("Vue d'ensemble du projet MMM")
     
-    col1, col2 = st.columns([2, 1])
+    # Suppression de la définition des colonnes divisées
+    # col1, col2 = st.columns([2, 1])
     
-    with col1:
-        st.subheader("Qu'est-ce que le Marketing Mix Modeling?")
-        st.write(
-            """
-            Le Marketing Mix Modeling (MMM) est une technique statistique qui analyse 
-            l'impact des différentes activités marketing sur les ventes. Elle permet de :
-            
-            - **Quantifier** l'efficacité de chaque canal marketing
-            - **Mesurer** le retour sur investissement (ROI)
-            - **Optimiser** l'allocation budgétaire
-            - **Prévoir** l'impact des futurs investissements marketing
-            """
-        )
+    # Contenu de la première colonne maintenant placé directement
+    st.subheader("Qu'est-ce que le Marketing Mix Modeling?")
+    st.write(
+        """
+        Le Marketing Mix Modeling (MMM) est une technique statistique qui analyse 
+        l'impact des différentes activités marketing sur les ventes. Elle permet de :
         
-        st.subheader("À propos des données Online Retail")
-        st.write(
-            """
-            Les données utilisées pour cette analyse proviennent du jeu de données 
-            "Online Retail" disponible sur Kaggle. Il s'agit de données transactionnelles 
-            d'un détaillant en ligne basé au Royaume-Uni, spécialisé dans les cadeaux.
+        - **Quantifier** l'efficacité de chaque canal marketing
+        - **Mesurer** le retour sur investissement (ROI)
+        - **Optimiser** l'allocation budgétaire
+        - **Prévoir** l'impact des futurs investissements marketing
+        """
+    )
+    
+    st.subheader("À propos des données Online Retail")
+    st.write(
+        """
+        Les données utilisées pour cette analyse proviennent du jeu de données 
+        "Online Retail" disponible sur Kaggle. Il s'agit de données transactionnelles 
+        d'un détaillant en ligne basé au Royaume-Uni, spécialisé dans les cadeaux.
+        
+        **Caractéristiques des données:**
+        - Période: Décembre 2010 à Décembre 2011
+        - ~500 000 transactions
+        - ~4 000 clients uniques
+        - ~4 000 produits uniques
+        """
+    )
+    
+    # Contenu de la deuxième colonne placé en dessous
+    st.image("https://media.woopra.com/image/upload/f_auto/v1721445625/What_is_Marketing_Mix_Modeling.png", 
+            caption="Exemple de Marketing Mix Modeling")
             
-            **Caractéristiques des données:**
-            - Période: Décembre 2010 à Décembre 2011
-            - ~500 000 transactions
-            - ~4 000 clients uniques
-            - ~4 000 produits uniques
-            """
-        )
-    
-    with col2:
-        st.image("https://media.woopra.com/image/upload/f_auto/v1721445625/What_is_Marketing_Mix_Modeling.png", 
-                caption="Exemple de Marketing Mix Modeling")
-    
     # Afficher les métriques du modèle si disponibles
     if metrics:
         st.subheader("Performance du modèle")
