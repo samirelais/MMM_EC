@@ -11,39 +11,41 @@ class MMMVisualization:
    """
    Classe pour créer des visualisations pour le Marketing Mix Modeling.
    """
-   
    def __init__(self, config_path):
-       """
-       Initialise la classe de visualisation avec un chemin de configuration.
-       
-       Args:
-           config_path: Chemin vers le fichier de configuration JSON
-       """
-       # Charger la configuration
-       with open(config_path, 'r') as config_file:
-           self.config = json.load(config_file)
-       
-       # Créer le répertoire reports s'il n'existe pas
-       os.makedirs("../reports", exist_ok=True)
-       os.makedirs("../reports/figures", exist_ok=True)
-       
-       # Configurer le style de matplotlib
-       plt.style.use('seaborn-whitegrid')
-       plt.rcParams['figure.figsize'] = (12, 7)
-       plt.rcParams['font.size'] = 12
-       
-       # Palette de couleurs personnalisée pour les canaux
-       self.channel_colors = {
-           'tv': '#1f77b4',
-           'radio': '#ff7f0e',
-           'print': '#2ca02c',
-           'social_media': '#d62728',
-           'search': '#9467bd',
-           'email': '#8c564b',
-           'display': '#e377c2',
-           'baseline': '#7f7f7f'
-       }
-   
+        """
+        Initialise la classe de visualisation avec un chemin de configuration.
+        
+        Args:
+            config_path: Chemin vers le fichier de configuration JSON
+        """
+        # Charger la configuration
+        with open(config_path, 'r') as config_file:
+            self.config = json.load(config_file)
+        
+        # Créer le répertoire reports s'il n'existe pas
+        os.makedirs("/content/drive/MyDrive/mmm-ecommerce/reports", exist_ok=True)
+        os.makedirs("/content/drive/MyDrive/mmm-ecommerce/reports/figures", exist_ok=True)
+        
+        # Configuration du style de matplotlib
+        try:
+            import matplotlib.pyplot as plt
+            import seaborn as sns
+            plt.style.use('default')  # Utiliser le style par défaut de matplotlib
+            sns.set_theme()  # Utiliser le thème par défaut de Seaborn
+        except ImportError:
+            print("Matplotlib ou Seaborn non installé. Utilisation des paramètres par défaut.")
+        
+        # Palette de couleurs personnalisée pour les canaux
+        self.channel_colors = {
+            'tv': '#1f77b4',
+            'radio': '#ff7f0e',
+            'print': '#2ca02c',
+            'social_media': '#d62728',
+            'search': '#9467bd',
+            'email': '#8c564b',
+            'display': '#e377c2',
+            'baseline': '#7f7f7f'
+        }
    def plot_channel_contributions(self, contributions_df):
        """
        Crée un graphique des contributions par canal marketing.
@@ -93,7 +95,7 @@ class MMMVisualization:
        plt.tight_layout()
        
        # Sauvegarder le graphique
-       output_path = "../reports/figures/channel_contributions.png"
+       output_path = "/content/drive/MyDrive/mmm-ecommerce/reports/figures/channel_contributions.png"
        plt.savefig(output_path, dpi=300)
        plt.close()
        
@@ -147,7 +149,7 @@ class MMMVisualization:
        plt.tight_layout()
        
        # Sauvegarder le graphique
-       output_path = "../reports/figures/roi_by_channel.png"
+       output_path = "/content/drive/MyDrive/mmm-ecommerce/reports/figures/roi_by_channel.png"
        plt.savefig(output_path, dpi=300)
        plt.close()
        
@@ -204,7 +206,7 @@ class MMMVisualization:
        plt.tight_layout()
        
        # Sauvegarder le graphique
-       output_path = "../reports/figures/budget_allocation.png"
+       output_path = "/content/drive/MyDrive/mmm-ecommerce/reports/figures/budget_allocation.png"
        plt.savefig(output_path, dpi=300)
        plt.close()
        
@@ -221,7 +223,7 @@ class MMMVisualization:
        Returns:
            Chemin vers l'image sauvegardée
        """
-       # Convertir en pandas
+       # Convertir en pandas  
        pdf = full_df.toPandas()
        
        # Préparer les données pour la prédiction
@@ -254,7 +256,7 @@ class MMMVisualization:
        plt.xticks(rotation=45)
        
        # Sauvegarder le graphique
-       output_path = "../reports/figures/actual_vs_predicted.png"
+       output_path = "/content/drive/MyDrive/mmm-ecommerce/reports/figures/actual_vs_predicted.png"
        plt.savefig(output_path, dpi=300, bbox_inches='tight')
        plt.close()
        
@@ -309,7 +311,7 @@ class MMMVisualization:
        plt.tight_layout()
        
        # Sauvegarder le graphique
-       output_path = "../reports/figures/contributions_over_time.png"
+       output_path = "/content/drive/MyDrive/mmm-ecommerce/reports/figures/contributions_over_time.png"
        plt.savefig(output_path, dpi=300, bbox_inches='tight')
        plt.close()
        
@@ -466,7 +468,7 @@ class MMMVisualization:
        report_text = "\n".join(report)
        
        # Sauvegarder le rapport au format markdown
-       output_path = "../reports/mmm_report.md"
+       output_path = "/content/drive/MyDrive/mmm-ecommerce/reports/mmm_report.md"
        with open(output_path, 'w') as f:
            f.write(report_text)
        
@@ -492,7 +494,7 @@ class MMMVisualization:
                        .container {{ background-color: white; padding: 30px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
                    </style>
                </head>
-               <body>
+               <body> 
                    <div class="container">
                    {html}
                    </div>
@@ -501,7 +503,7 @@ class MMMVisualization:
                """
                
                # Sauvegarder le rapport au format HTML
-               html_path = "../reports/mmm_report.html"
+               html_path = "/content/drive/MyDrive/mmm-ecommerce/reports/mmm_report.html"
                with open(html_path, 'w') as f:
                    f.write(html_template)
                

@@ -1,6 +1,6 @@
 {
   "data": {
-    "retail_data_path": "data/online_retail.csv",
+    "retail_data_path": "/content/drive/MyDrive/mmm-ecommerce/data/Online_Retail.csv",
     "include_returns": false,
     "start_date": "2010-12-01",
     "end_date": "2011-12-09",

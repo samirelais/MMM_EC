@@ -2,6 +2,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date, unix_timestamp, dayofmonth, month, year, sum, count, when, lit
 from pyspark.sql.window import Window
 import os
+import pandas as pd
+import numpy as np  # Ajout de l'importation manquante
 import json
 
 class OnlineRetailLoader:
@@ -31,7 +33,7 @@ class OnlineRetailLoader:
             DataFrame Spark contenant les données nettoyées
         """
         # Définir le chemin du fichier
-        data_path = self.config['data'].get('retail_data_path', 'data/online_retail.csv')
+        data_path = self.config['data'].get('retail_data_path', '/content/drive/MyDrive/mmm-ecommerce/data/online_retail.csv')
         
         # Charger les données
         print(f"Chargement des données depuis {data_path}...")

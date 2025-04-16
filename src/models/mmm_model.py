@@ -37,13 +37,13 @@ class MMMModel:
         
         # Stocker les paramètres d'adstock par canal
         self.adstock_params = {
-            'tv': {'decay_rate': 0.7, 'max_lag': 14, 'saturation_type': 'hill', 'k': 0.7, 'S': 50000},
-            'radio': {'decay_rate': 0.6, 'max_lag': 7, 'saturation_type': 'hill', 'k': 0.6, 'S': 20000},
-            'print': {'decay_rate': 0.5, 'max_lag': 21, 'saturation_type': 'hill', 'k': 0.5, 'S': 30000},
-            'social_media': {'decay_rate': 0.5, 'max_lag': 5, 'saturation_type': 'hill', 'k': 0.8, 'S': 25000},
-            'search': {'decay_rate': 0.4, 'max_lag': 3, 'saturation_type': 'hill', 'k': 0.9, 'S': 40000},
-            'email': {'decay_rate': 0.3, 'max_lag': 4, 'saturation_type': 'hill', 'k': 0.7, 'S': 10000},
-            'display': {'decay_rate': 0.5, 'max_lag': 10, 'saturation_type': 'hill', 'k': 0.6, 'S': 20000}
+            'tv': {'decay_rate': 0.7, 'max_lag': 14, 'saturation_type': 'hill', 'k': 0.7, 'S': 5000},
+            'radio': {'decay_rate': 0.6, 'max_lag': 7, 'saturation_type': 'hill', 'k': 0.6, 'S': 2000},
+            'print': {'decay_rate': 0.5, 'max_lag': 21, 'saturation_type': 'hill', 'k': 0.5, 'S': 3000},
+            'social_media': {'decay_rate': 0.5, 'max_lag': 5, 'saturation_type': 'hill', 'k': 0.8, 'S': 2500},
+            'search': {'decay_rate': 0.4, 'max_lag': 3, 'saturation_type': 'hill', 'k': 0.9, 'S': 4000},
+            'email': {'decay_rate': 0.3, 'max_lag': 4, 'saturation_type': 'hill', 'k': 0.7, 'S': 1000},
+            'display': {'decay_rate': 0.5, 'max_lag': 10, 'saturation_type': 'hill', 'k': 0.6, 'S': 2000}
         }
     
     def preprocess_data(self, sales_df, marketing_df, external_df=None):
@@ -152,31 +152,14 @@ class MMMModel:
         # Créer le jeu de données LightGBM
         train_data = lgb.Dataset(X_train, label=y_train)
         
-        # Validation temporelle
-        if self.config['modeling'].get('validation_strategy') == 'time_series_split':
-            num_folds = self.config['modeling'].get('num_validation_folds', 3)
-            tscv = TimeSeriesSplit(n_splits=num_folds)
-            
-            # Entraîner avec validation croisée temporelle
-            cv_results = lgb.cv(
-                params,
-                train_data,
-                num_boost_round=1000,
-                folds=tscv,
-                early_stopping_rounds=50,
-                verbose_eval=100
-            )
-            
-            best_iteration = len(cv_results['rmse-mean'])
-            print(f"Meilleure itération: {best_iteration}, RMSE: {cv_results['rmse-mean'][-1]:.4f}")
-        else:
-            best_iteration = 1000
+        # Entraîner le modèle directement sans validation croisée
+        num_boost_round = 500  # Nombre d'itérations fixe
+        print(f"Entraînement du modèle avec {num_boost_round} itérations...")
         
-        # Entraîner le modèle final
         self.model = lgb.train(
             params,
             train_data,
-            num_boost_round=best_iteration
+            num_boost_round=num_boost_round
         )
         
         # Calculer l'importance des caractéristiques
