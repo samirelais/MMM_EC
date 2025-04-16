@@ -1,23 +1,25 @@
 # Gestion des données et calculs scientifiques
-pandas==2.0.1
-numpy==1.24.3
-scipy==1.10.1
+pandas
+numpy
+scipy
 
 # Machine Learning
-scikit-learn==1.2.2
-lightgbm==3.3.5
+scikit-learn
+lightgbm
 
 # Visualisation
-matplotlib==3.7.1
-seaborn==0.12.2
-plotly==5.14.1
+matplotlib
+seaborn
+plotly
 
 # Génération de rapports
-reportlab==3.6.12
-fpdf==1.7.2
+reportlab
+fpdf
 
 # Application Web
-streamlit==1.22.0
+streamlit
+pyngrok
 
 # Utilitaires additionnels
-openpyxl==3.1.2
+openpyxl
+jq
