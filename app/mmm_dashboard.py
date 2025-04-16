@@ -692,9 +692,8 @@ if report_button:
 if page == "Vue d'ensemble":
     st.header("Vue d'ensemble du projet MMM")
     
-    # Suppression de la définition des colonnes divisées
-    # col1, col2 = st.columns([2, 1])
-    
+    st.image("https://media.woopra.com/image/upload/f_auto/v1721445625/What_is_Marketing_Mix_Modeling.png", 
+            caption="Marketing Mix Modeling")
     # Contenu de la première colonne maintenant placé directement
     st.subheader("Qu'est-ce que le Marketing Mix Modeling?")
     st.write(
@@ -724,9 +723,7 @@ if page == "Vue d'ensemble":
         """
     )
     
-    # Contenu de la deuxième colonne placé en dessous
-    st.image("https://media.woopra.com/image/upload/f_auto/v1721445625/What_is_Marketing_Mix_Modeling.png", 
-            caption="Exemple de Marketing Mix Modeling")
+
             
     # Afficher les métriques du modèle si disponibles
     if metrics:
