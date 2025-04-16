@@ -20,148 +20,219 @@ from reportlab.lib.units import inch
 
 def get_project_root():
     """
-    Trouve le chemin racine du projet de manière robuste.
+    Trouve le chemin racine du projet de manière robuste et compatible multiplateforme.
     """
+    # Liste des chemins potentiels
     possible_paths = [
-        os.path.dirname(os.path.abspath(__file__)),  # Dossier app
-        os.getcwd(),
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        os.getcwd(),  # Répertoire de travail courant
+        os.path.dirname(os.path.abspath(__file__)),  # Chemin du script
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # Un niveau au-dessus
+        '/app'  # Chemin spécifique à Streamlit Cloud
     ]
     
-    for path in possible_paths:
-        config_path = os.path.join(path, 'config', 'online_retail_config.json')
-        data_path = os.path.join(path, 'data', 'online_retail.csv')
-        
-        if os.path.exists(config_path) or os.path.exists(data_path):
+    # Chemins relatifs à tester
+    relative_paths = [
+        'data',
+        '../data',
+        './data',
+        'MMM_EC/data',
+        '../MMM_EC/data'
+    ]
+    
+    # Fonction pour vérifier si un chemin existe et contient les fichiers nécessaires
+    def is_valid_path(path):
+        try:
+            # Liste des fichiers à vérifier
+            required_files = [
+                'online_retail.csv', 
+                'online_retail_config.json'
+            ]
+            
+            # Vérifier si le chemin existe et contient les fichiers requis
+            return (os.path.exists(path) and 
+                    any(os.path.exists(os.path.join(path, f)) for f in required_files))
+        except Exception:
+            return False
+    
+    # Tester les chemins absolus
+    for base_path in possible_paths:
+        for relative_path in relative_paths:
+            full_path = os.path.normpath(os.path.join(base_path, relative_path))
+            if is_valid_path(full_path):
+                return full_path
+    
+    # Dernier recours : utiliser un chemin par défaut
+    default_path = os.path.join(os.getcwd(), 'data')
+    os.makedirs(default_path, exist_ok=True)
+    return default_path
+
+def find_file(filename, possible_locations=None):
+    """
+    Recherche un fichier dans différents emplacements possibles.
+    """
+    if possible_locations is None:
+        possible_locations = [
+            os.getcwd(),
+            os.path.dirname(os.path.abspath(__file__)),
+            os.path.join(os.getcwd(), 'data'),
+            os.path.join(os.getcwd(), 'config'),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data'),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config'),
+            '/app/data',
+            '/app/config',
+            '/content/drive/MyDrive/mmm-ecommerce/data',
+            '/content/drive/MyDrive/mmm-ecommerce/config'
+        ]
+    
+    for location in possible_locations:
+        path = os.path.join(location, filename)
+        if os.path.exists(path):
             return path
     
-    return os.getcwd()
+    return None
 
-def load_config(config_filename='online_retail_config.json'):
+def load_config(filename='online_retail_config.json'):
     """
     Charger la configuration de manière robuste.
     """
     try:
-        project_root = get_project_root()
-        config_path = os.path.join(project_root, 'config', config_filename)
+        # Trouver le fichier de configuration
+        config_path = find_file(filename)
         
-        if not os.path.exists(config_path):
-            st.warning(f"Fichier de configuration non trouvé: {config_path}")
-            return {
-                "marketing_channels": ["search", "social", "email", "display", "affiliates"],
-                "data_path": "data/online_retail.csv",
-                "date_column": "InvoiceDate",
-                "target_column": "Revenue",
-                "time_granularity": "daily"
+        if config_path:
+            st.info(f"Chargement de la configuration depuis : {config_path}")
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            
+            # Adapter le chemin des données si nécessaire
+            if 'data' in config and 'retail_data_path' in config['data']:
+                data_filename = os.path.basename(config['data']['retail_data_path'])
+                data_path = find_file(data_filename)
+                
+                if data_path:
+                    config['data']['retail_data_path'] = data_path
+            
+            return config
+        
+        # Configuration par défaut si aucun fichier n'est trouvé
+        st.warning("Aucun fichier de configuration trouvé. Utilisation de la configuration par défaut.")
+        return {
+            "data": {
+                "retail_data_path": "data/Online_Retail.csv",
+                "include_returns": False,
+                "start_date": "2010-12-01",
+                "end_date": "2011-12-09"
+            },
+            "marketing_channels": ["tv", "radio", "print", "social_media", "search", "email", "display"],
+            "preprocessing": {
+                "remove_outliers": True,
+                "outlier_threshold": 3
             }
-        
-        with open(config_path, "r") as f:
-            return json.load(f)
+        }
     
     except Exception as e:
         st.error(f"Erreur lors du chargement de la configuration: {e}")
         return {
-            "marketing_channels": ["search", "social", "email", "display", "affiliates"],
-            "data_path": "data/online_retail.csv",
-            "date_column": "InvoiceDate",
-            "target_column": "Revenue",
-            "time_granularity": "daily"
+            "data": {
+                "retail_data_path": "data/Online_Retail.csv",
+                "include_returns": False,
+                "start_date": "2010-12-01",
+                "end_date": "2011-12-09"
+            },
+            "marketing_channels": ["tv", "radio", "print", "social_media", "search", "email", "display"]
         }
 
-def load_data(data_filename='online_retail.csv'):
+def load_data(config=None):
     """
     Charger les données de manière robuste.
     """
+    # Utiliser la configuration fournie ou charger une configuration par défaut
+    if config is None:
+        config = load_config()
+    
     try:
-        project_root = get_project_root()
-        data_path = os.path.join(project_root, 'data', data_filename)
+        # Extraire le nom du fichier ou utiliser un nom par défaut
+        data_filename = os.path.basename(config['data'].get('retail_data_path', 'Online_Retail.csv'))
         
-        if not os.path.exists(data_path):
-            st.warning(f"Fichier de données non trouvé: {data_path}")
+        # Trouver le fichier de données
+        data_path = find_file(data_filename)
+        
+        if data_path:
+            st.info(f"Chargement des données depuis : {data_path}")
+            df = pd.read_csv(data_path)
             
-            # Génération de données de démonstration
-            dates = pd.date_range(start='2010-12-01', end='2011-12-31')
-            data = pd.DataFrame({
-                'Date': dates,
-                'Revenue': np.random.normal(5000, 1000, len(dates)),
-                'Search_Spend': np.random.normal(1000, 200, len(dates)),
-                'Social_Spend': np.random.normal(800, 150, len(dates)),
-                'Email_Spend': np.random.normal(500, 100, len(dates)),
-                'Display_Spend': np.random.normal(700, 180, len(dates)),
-                'Affiliates_Spend': np.random.normal(600, 120, len(dates))
-            })
-            return data
+            # Convertir la colonne de date
+            df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+            
+            # Filtrer par date si spécifié
+            if 'start_date' in config['data'] and 'end_date' in config['data']:
+                start_date = pd.to_datetime(config['data']['start_date'])
+                end_date = pd.to_datetime(config['data']['end_date'])
+                df = df[(df['InvoiceDate'] >= start_date) & (df['InvoiceDate'] <= end_date)]
+            
+            # Gérer les retours si nécessaire
+            if config['data'].get('include_returns', False) is False:
+                df = df[df['Quantity'] > 0]
+            
+            return df
         
-        return pd.read_csv(data_path)
+        # Générer des données de démonstration si aucun fichier n'est trouvé
+        st.warning("Aucun fichier de données trouvé. Génération de données de démonstration.")
+        return _generate_demo_data()
     
     except Exception as e:
         st.error(f"Erreur lors du chargement des données: {e}")
-        
-        # Génération de données de démonstration
-        dates = pd.date_range(start='2010-12-01', end='2011-12-31')
-        data = pd.DataFrame({
-            'Date': dates,
-            'Revenue': np.random.normal(5000, 1000, len(dates)),
-            'Search_Spend': np.random.normal(1000, 200, len(dates)),
-            'Social_Spend': np.random.normal(800, 150, len(dates)),
-            'Email_Spend': np.random.normal(500, 100, len(dates)),
-            'Display_Spend': np.random.normal(700, 180, len(dates)),
-            'Affiliates_Spend': np.random.normal(600, 120, len(dates))
-        })
-        return data
+        return _generate_demo_data()
+
+def _generate_demo_data():
+    """
+    Générer des données de démonstration.
+    """
+    dates = pd.date_range(start='2010-12-01', end='2011-12-09')
+    data = pd.DataFrame({
+        'InvoiceDate': dates,
+        'InvoiceNo': [f'INV_{i}' for i in range(len(dates))],
+        'StockCode': np.random.choice(['A001', 'B002', 'C003'], len(dates)),
+        'Description': ['Sample Product ' + str(i) for i in range(len(dates))],
+        'Quantity': np.random.randint(1, 10, len(dates)),
+        'UnitPrice': np.random.uniform(10, 100, len(dates)),
+        'CustomerID': np.random.randint(10000, 99999, len(dates)),
+        'Country': np.random.choice(['UK', 'France', 'Germany'], len(dates))
+    })
+    data['TotalPrice'] = data['Quantity'] * data['UnitPrice']
+    return data
 
 def load_results(results_folder='reports'):
     """
     Charger les résultats du modèle de manière robuste.
     """
     try:
-        project_root = get_project_root()
+        # Chemins possibles pour les fichiers de résultats
+        possible_paths = [
+            os.getcwd(),
+            os.path.join(os.getcwd(), results_folder),
+            os.path.dirname(os.path.abspath(__file__)),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), results_folder),
+            '/app/reports',
+            '/content/drive/MyDrive/mmm-ecommerce/reports'
+        ]
         
-        contributions_path = os.path.join(project_root, results_folder, 'channel_contributions.csv')
-        budget_path = os.path.join(project_root, results_folder, 'budget_allocation.csv')
-        metrics_path = os.path.join(project_root, results_folder, 'model_metrics.json')
+        # Noms des fichiers de résultats
+        contributions_filename = 'channel_contributions.csv'
+        budget_filename = 'budget_allocation.csv'
+        metrics_filename = 'model_metrics.json'
+        
+        # Trouver les chemins des fichiers
+        contributions_path = find_file(contributions_filename, possible_paths)
+        budget_path = find_file(budget_filename, possible_paths)
+        metrics_path = find_file(metrics_filename, possible_paths)
         
         # Si les fichiers n'existent pas, générer des données de démonstration
-        if not all(os.path.exists(path) for path in [contributions_path, budget_path, metrics_path]):
+        if not all([contributions_path, budget_path, metrics_path]):
             st.warning("Fichiers de résultats non trouvés. Génération de données de démonstration.")
-            
-            # Générer des contributions par canal
-            dates = pd.date_range(start='2010-12-01', end='2011-12-31')
-            contributions_df = pd.DataFrame({'date': dates})
-            contributions_df['actual_revenue'] = np.random.normal(50000, 10000, len(dates))
-            contributions_df['predicted_revenue'] = np.random.normal(contributions_df['actual_revenue'], 5000)
-            
-            channels = ['search', 'social', 'email', 'display', 'affiliates']
-            for channel in channels:
-                contributions_df[f'{channel}_contribution'] = np.random.normal(5000, 1000, len(dates))
-                contributions_df[f'{channel}_spend'] = np.random.normal(2000, 500, len(dates))
-                contributions_df[f'{channel}_roi'] = contributions_df[f'{channel}_contribution'] / contributions_df[f'{channel}_spend']
-            
-            # Générer l'allocation budgétaire
-            budget_data = []
-            total_budget = 100000
-            for channel in channels:
-                budget = np.random.normal(total_budget / len(channels), 5000)
-                budget_data.append({
-                    'channel': channel,
-                    'budget': budget,
-                    'budget_pct': budget / total_budget * 100,
-                    'roi': np.random.uniform(1.5, 4.0)
-                })
-            
-            budget_df = pd.DataFrame(budget_data)
-            
-            # Métriques
-            metrics = {
-                'r2': 0.85,
-                'rmse': 5000,
-                'mae': 4000,
-                'mape': 8.5
-            }
-            
-            return contributions_df, budget_df, metrics
+            return _generate_demo_results()
         
-        # Charger les fichiers existants
+        # Charger les fichiers
         contributions_df = pd.read_csv(contributions_path)
         budget_df = pd.read_csv(budget_path)
         
@@ -172,40 +243,59 @@ def load_results(results_folder='reports'):
     
     except Exception as e:
         st.error(f"Erreur lors du chargement des résultats: {e}")
+        return _generate_demo_results()
+
+
+
+def _generate_demo_results():
+    """
+    Générer des résultats de démonstration.
+    """
+    # Canaux de marketing par défaut
+    channels = ["tv", "radio", "print", "social_media", "search", "email", "display"]
+    
+    # Générer des contributions par canal
+    dates = pd.date_range(start='2010-12-01', end='2011-12-31')
+    contributions_df = pd.DataFrame({'date': dates})
+    contributions_df['actual_revenue'] = np.random.normal(50000, 10000, len(dates))
+    contributions_df['predicted_revenue'] = np.random.normal(contributions_df['actual_revenue'], 5000)
+    
+    for channel in channels:
+        contributions_df[f'{channel}_contribution'] = np.random.normal(5000, 1000, len(dates))
+        contributions_df[f'{channel}_spend'] = np.random.normal(2000, 500, len(dates))
         
-        # Données de démonstration (identiques à la partie précédente)
-        dates = pd.date_range(start='2010-12-01', end='2011-12-31')
-        contributions_df = pd.DataFrame({'date': dates})
-        contributions_df['actual_revenue'] = np.random.normal(50000, 10000, len(dates))
-        contributions_df['predicted_revenue'] = np.random.normal(contributions_df['actual_revenue'], 5000)
-        
-        channels = ['search', 'social', 'email', 'display', 'affiliates']
-        for channel in channels:
-            contributions_df[f'{channel}_contribution'] = np.random.normal(5000, 1000, len(dates))
-            contributions_df[f'{channel}_spend'] = np.random.normal(2000, 500, len(dates))
-            contributions_df[f'{channel}_roi'] = contributions_df[f'{channel}_contribution'] / contributions_df[f'{channel}_spend']
-        
-        budget_data = []
-        total_budget = 100000
-        for channel in channels:
-            budget = np.random.normal(total_budget / len(channels), 5000)
-            budget_data.append({
-                'channel': channel,
-                'budget': budget,
-                'budget_pct': budget / total_budget * 100,
-                'roi': np.random.uniform(1.5, 4.0)
-            })
-        
-        budget_df = pd.DataFrame(budget_data)
-        
-        metrics = {
-            'r2': 0.85,
-            'rmse': 5000,
-            'mae': 4000,
-            'mape': 8.5
-        }
-        
-        return contributions_df, budget_df, metrics
+        # Éviter la division par zéro
+        contributions_df[f'{channel}_roi'] = np.where(
+            contributions_df[f'{channel}_spend'] != 0, 
+            contributions_df[f'{channel}_contribution'] / contributions_df[f'{channel}_spend'], 
+            0
+        )
+    
+    # Générer l'allocation budgétaire
+    budget_data = []
+    total_budget = 100000
+    for channel in channels:
+        budget = np.random.normal(total_budget / len(channels), 5000)
+        budget_data.append({
+            'channel': channel,
+            'budget': budget,
+            'budget_pct': budget / total_budget * 100,
+            'roi': np.random.uniform(1.5, 4.0)
+        })
+    
+    budget_df = pd.DataFrame(budget_data)
+    
+    # Métriques
+    metrics = {
+        'r2': 0.85,
+        'rmse': 5000,
+        'mae': 4000,
+        'mape': 8.5
+    }
+    
+    return contributions_df, budget_df, metrics
+
+    
 
 # Configuration de la page Streamlit
 st.set_page_config(
